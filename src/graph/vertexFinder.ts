@@ -1,3 +1,4 @@
+import { nearestPointOnSegment } from '@trufi/utils/common/nearestPointOnSegment';
 import { vec2dist } from '@trufi/utils/vec2/dist';
 import RBush from 'rbush';
 import { ClientGraphEdge, ClientGraphVertex, ClientGraph } from './type';
@@ -103,32 +104,4 @@ function createPointBBox(point: number[], offset: number) {
         maxX: point[0] + offset,
         maxY: point[1] + offset,
     };
-}
-
-function nearestPointOnSegment(point: number[], segmentA: number[], segmentB: number[]) {
-    const A = point[0] - segmentA[0];
-    const B = point[1] - segmentA[1];
-    const C = segmentB[0] - segmentA[0];
-    const D = segmentB[1] - segmentA[1];
-
-    const dot = A * C + B * D;
-    const lengthSquared = C * C + D * D;
-    const param = lengthSquared !== 0 ? dot / lengthSquared : 0;
-
-    if (param < 0) {
-        return {
-            point: segmentA,
-            t: 0,
-        };
-    } else if (param > 1) {
-        return {
-            point: segmentB,
-            t: 1,
-        };
-    } else {
-        return {
-            point: [Math.round(segmentA[0] + param * C), Math.round(segmentA[1] + param * D)],
-            t: param,
-        };
-    }
 }

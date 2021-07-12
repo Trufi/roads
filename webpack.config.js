@@ -26,7 +26,7 @@ module.exports = (env) => {
             extensions: ['.ts', '.js'],
         },
 
-        entry: './src/index.ts',
+        entry: mode === 'development' ? './demo/index.ts' : './src/index.ts',
 
         output: {
             filename: 'index.js',
@@ -45,6 +45,7 @@ module.exports = (env) => {
                 modules: false,
             },
             disableHostCheck: true,
+            contentBase: path.join(__dirname, 'demo'),
             publicPath: '/dist',
         },
     };

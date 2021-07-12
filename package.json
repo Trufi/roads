@@ -1,6 +1,6 @@
 {
     "name": "roads",
-    "version": "0.0.2",
+    "version": "0.0.1",
     "description": "",
     "main": "dist/index.js",
     "repository": {
@@ -21,12 +21,13 @@
         "test": "npm run prettier && npm run build"
     },
     "dependencies": {
-        "@trufi/utils": "0.0.1",
+        "@trufi/utils": "0.0.2",
         "@types/rbush": "^3.0.0",
         "rbush": "^3.0.1",
         "tslib": "^2.3.0"
     },
     "devDependencies": {
+        "@2gis/mapgl": "^1.14.1",
         "fork-ts-checker-webpack-plugin": "^6.2.12",
         "prettier": "^2.3.2",
         "ts-loader": "^9.2.3",

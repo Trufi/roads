@@ -1,6 +1,7 @@
-import { clamp } from '@trufi/utils/common/clamp';
+import { EventEmitter } from '@trufi/utils';
 import { ClientGraphEdge, ClientGraphVertex } from './graph/type';
 import { findEdgeFromVertexToVertex, getSegment } from './graph/utils';
+import { pathFindFromMidway } from './pathfind';
 
 export interface PointPosition {
     edge: ClientGraphEdge;
@@ -18,13 +19,15 @@ export interface PointInitialData {
     edge: ClientGraphEdge;
     at: number;
     speed: number;
-    color: number;
-    score: number;
+    userData?: any;
 }
 
-export class Point {
-    public readonly color: number;
-    private score: number;
+export interface PointEvents {
+    move: undefined;
+}
+
+export class Point extends EventEmitter<PointEvents> {
+    public userData: any;
     private speed: number;
 
     private forward = true;
@@ -34,6 +37,8 @@ export class Point {
     private readonly route: PointRoute;
 
     constructor(data: PointInitialData) {
+        super();
+
         this.route = {
             fromAt: data.at,
             toAt: data.at,
@@ -42,12 +47,20 @@ export class Point {
         };
 
         this.speed = data.speed;
-        this.color = data.color;
-        this.score = data.score;
+        this.userData = data.userData;
         this.position = { edge: data.edge, at: data.at };
     }
 
-    public setRoute(time: number, fromAt: number, vertices: ClientGraphVertex[], toAt: number) {
+    public moveTo(toPosition: PointPosition) {
+        const vertices = pathFindFromMidway(this.position, toPosition);
+        if (!vertices) {
+            console.log(`Not found path`);
+            return;
+        }
+
+        const fromAt = this.position.at;
+        const toAt = toPosition.at;
+
         const maybeEdge = findEdgeFromVertexToVertex(vertices[0], vertices[1]);
         if (!maybeEdge) {
             console.log(`Не найдена кривая пути`);
@@ -62,17 +75,11 @@ export class Point {
         this.position.at = fromAt;
         this.position.edge = maybeEdge.edge;
 
-        this.lastUpdateTime = time;
-
         this.forward = maybeEdge.forward;
     }
 
     public getRoute() {
         return this.route;
-    }
-
-    public getScore() {
-        return this.score;
     }
 
     public getSpeed() {
@@ -107,9 +114,9 @@ export class Point {
         }
 
         // Обновляем загрязнение дороги и начисляем очки
-        const nextPollution = clamp(position.edge.pollution - dx, 0, 1);
-        this.score += ((position.edge.pollution - nextPollution) * position.edge.length) / 1000;
-        position.edge.pollution = nextPollution;
+        // const nextPollution = clamp(position.edge.pollution - dx, 0, 1);
+        // this.score += ((position.edge.pollution - nextPollution) * position.edge.length) / 1000;
+        // position.edge.pollution = nextPollution;
 
         let endAt: number;
         if (isFinalRouteEdge) {
@@ -145,11 +152,12 @@ export class Point {
                 }
             }
         }
+
+        this.emit('move');
     }
 
     public getDebugInfo() {
         return {
-            score: this.score,
             speed: this.speed,
             at: this.position.at,
             edge: this.position.edge.index,

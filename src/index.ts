@@ -1,3 +1,10 @@
 export { Roads } from './roads';
-export { ClientGraph, ClientGraphEdge, ClientGraphVertex } from './graph/type';
-export { PointInitialData } from './point';
+export {
+    ClientGraph,
+    ClientGraphEdge,
+    ClientGraphVertex,
+    DataGraph,
+    DataGraphEdge,
+    DataGraphVertex,
+} from './graph/type';
+export { PointInitialData, Point } from './point';
