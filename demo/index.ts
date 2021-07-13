@@ -22,31 +22,47 @@ function initialize(data: DataGraph) {
         marker: mapgl.Marker;
     }> = [];
 
-    const startVertex = roads.findNearestVertex(mapPointFromLngLat(randomPoint()));
-    const moveToVertex = roads.findNearestVertex(mapPointFromLngLat(randomPoint()));
-    if (startVertex && moveToVertex) {
-        const { edge, at } = startVertex;
-        const point = roads.createPoint({
-            edge,
-            at,
-            speed: 100,
-        });
+    for (let i = 0; i < 5; i++) {
+        const startVertex = roads.findNearestVertex(mapPointFromLngLat(randomPoint()));
+        if (startVertex) {
+            const { edge, at } = startVertex;
+            const point = roads.createPoint({
+                edge,
+                at,
+                speed: 50,
+            });
 
-        point.moveTo(moveToVertex);
+            const startMoving = () => {
+                const moveToVertex = roads.findNearestVertex(mapPointFromLngLat(randomPoint()));
+                if (moveToVertex) {
+                    point.moveTo(moveToVertex);
+                }
+            };
 
-        const marker = new mapgl.Marker(map, {
-            coordinates: mapPointToLngLat(point.getCoords()),
-        });
+            point.on('routefinish', startMoving);
+            startMoving();
 
-        point.on('move', () => {
-            const coordinates = mapPointToLngLat(point.getCoords());
-            marker.setCoordinates(coordinates);
-        });
+            const marker = new mapgl.Marker(map, {
+                coordinates: mapPointToLngLat(point.getCoords()),
+                icon: './icon.svg',
+                size: [16, 16],
+                label: {
+                    text: `${i}`,
+                    offset: [0, 0],
+                    fontSize: 12,
+                },
+            });
 
-        points.push({ point, marker });
+            point.on('move', () => {
+                const coordinates = mapPointToLngLat(point.getCoords());
+                marker.setCoordinates(coordinates);
+            });
+
+            points.push({ point, marker });
+        }
     }
 }
 
 function randomPoint() {
-    return [center[0] + Math.random() * 0.01, center[1] + Math.random() * 0.02];
+    return [center[0] + (Math.random() - 0.5) * 0.06, center[1] + (Math.random() - 0.5) * 0.03];
 }

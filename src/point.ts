@@ -24,6 +24,7 @@ export interface PointInitialData {
 
 export interface PointEvents {
     move: undefined;
+    routefinish: undefined;
 }
 
 export class Point extends EventEmitter<PointEvents> {
@@ -137,6 +138,7 @@ export class Point extends EventEmitter<PointEvents> {
         if (remain < 0) {
             if (isFinalRouteEdge) {
                 position.at = this.route.toAt;
+                this.emit('routefinish');
             } else {
                 this.route.edgeIndexInRoute++;
                 const maybeEdge = findEdgeFromVertexToVertex(
