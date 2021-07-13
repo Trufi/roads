@@ -1,6 +1,7 @@
 import { ClientGraphEdge, ClientGraphVertex } from '../graph/type';
 import { getSegment } from '../graph/utils';
 import { PointPosition } from '../point';
+import { Route } from '../route';
 import { FlatQueue } from './flatqueue';
 
 const list = new FlatQueue<ClientGraphVertex>();
@@ -11,10 +12,15 @@ function heuristic(dx: number, dy: number) {
     return dx + dy;
 }
 
-export function pathFindFromMidway(from: PointPosition, to: PointPosition) {
+export function pathFindFromMidway(from: PointPosition, to: PointPosition): Route | undefined {
     if (from.edge === to.edge) {
         const { a, b } = from.edge;
-        return from.at < to.at ? [a, b] : [b, a];
+        const vertices = from.at < to.at ? [a, b] : [b, a];
+        return {
+            fromAt: from.at,
+            toAt: to.at,
+            vertices,
+        };
     }
 
     let fromVertex: ClientGraphVertex;
@@ -56,7 +62,11 @@ export function pathFindFromMidway(from: PointPosition, to: PointPosition) {
         path[path.length - 1] = anotherEdgeVertex(to.edge, path[path.length - 2]);
     }
 
-    return path;
+    return {
+        fromAt: from.at,
+        toAt: to.at,
+        vertices: path,
+    };
 }
 
 function createArtificialVertexAndEdges(position: PointPosition) {

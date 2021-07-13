@@ -1,7 +1,7 @@
 /// <reference path="../node_modules/@2gis/mapgl/global.d.ts" />
 
 import { mapPointFromLngLat, mapPointToLngLat } from '@trufi/utils';
-import { DataGraph, Point, Roads } from '../src';
+import { DataGraph, getRouteGeometry, Point, Roads } from '../src';
 
 const center = [82.92494, 55.0294];
 
@@ -10,6 +10,8 @@ const map = new mapgl.Map('map', {
     center,
     zoom: 14,
 });
+
+window.addEventListener('resize', () => map.invalidateSize());
 
 fetch('./data.json')
     .then((res) => res.json())
@@ -51,11 +53,29 @@ function initialize(data: DataGraph) {
                     offset: [0, 0],
                     fontSize: 12,
                 },
+                zIndex: 1,
             });
+
+            let polyline: mapgl.Polyline | undefined;
+            const drawPath = () => {
+                if (polyline) {
+                    polyline.destroy();
+                }
+                polyline = new mapgl.Polyline(map, {
+                    coordinates: getRouteGeometry(point.getRoute()).map((coords) =>
+                        mapPointToLngLat(coords),
+                    ),
+                    color: '#ff000077',
+                    width: 3,
+                    zIndex: 0,
+                });
+            };
 
             point.on('move', () => {
                 const coordinates = mapPointToLngLat(point.getCoords());
                 marker.setCoordinates(coordinates);
+
+                drawPath();
             });
 
             points.push({ point, marker });
