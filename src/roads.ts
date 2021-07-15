@@ -49,6 +49,10 @@ export class Roads extends EventEmitter<RoadsEvents> {
         return point;
     }
 
+    public removePoint(point: Point) {
+        this.points = this.points.filter((p) => p !== point);
+    }
+
     public getPositionCoords(position: PointPosition) {
         const { coords } = getSegment(position.edge, position.at);
         return coords;
