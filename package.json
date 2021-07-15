@@ -15,8 +15,8 @@
     "license": "MIT",
     "scripts": {
         "start": "npm run dev",
-        "build": "tsc",
-        "builddemo": "webpack --env=production",
+        "build": "shx rm -rf dist && tsc",
+        "builddemo": "shx rm -rf dist && webpack --env=production && shx cp -r demo/* dist",
         "dev": "webpack serve",
         "prettier": "prettier --check \"./**/*.{ts,tsx,js,json,html,css}\"",
         "test": "npm run prettier && npm run build",
