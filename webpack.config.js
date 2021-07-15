@@ -26,11 +26,11 @@ module.exports = (env) => {
             extensions: ['.ts', '.js'],
         },
 
-        entry: mode === 'development' ? './demo/index.ts' : './src/index.ts',
+        entry: './demo/index.ts',
 
         output: {
             filename: 'index.js',
-            path: path.resolve(__dirname, 'dist'),
+            path: path.resolve(__dirname, 'demo/dist'),
             publicPath: '/dist',
         },
 
