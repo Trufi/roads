@@ -6,12 +6,20 @@ import { FlatQueue } from './flatqueue';
 
 const list = new FlatQueue<ClientGraphVertex>();
 
+/**
+ * Счетчик идентификаторов "поиска пути".
+ * Идентификаторы меняются каждый раз при запуске алгоритма и используются для пометок обработанных вершин графа.
+ */
 let idCounter = 0;
 
 function heuristic(dx: number, dy: number) {
     return dx + dy;
 }
 
+/**
+ * Поиск пути между точками.
+ * Точки могут находится не только на вершинах графа, но и где-то на звеньях.
+ */
 export function pathFindFromMidway(from: PointPosition, to: PointPosition): Route | undefined {
     if (from.edge === to.edge) {
         const { a, b } = from.edge;
@@ -23,6 +31,8 @@ export function pathFindFromMidway(from: PointPosition, to: PointPosition): Rout
         };
     }
 
+    // Если точки "от" и "до" не на вершинах графа,
+    // то создаем искусственные вершины для корректной работы алгоритма.
     let fromVertex: ClientGraphVertex;
     if (from.at === 0) {
         fromVertex = from.edge.a;
@@ -47,11 +57,13 @@ export function pathFindFromMidway(from: PointPosition, to: PointPosition): Rout
         rightEdge.b.pathFind.artificialEdge = rightEdge;
     }
 
+    // Алгоритм поиска пути
     let path = pathFind(fromVertex, toVertex);
     if (!path) {
         return;
     }
 
+    // Удаляем созданные искусственные вершины
     if (fromVertex.type === 'artificial') {
         path[0] = anotherEdgeVertex(from.edge, path[1]);
     }
@@ -167,7 +179,7 @@ function pathFind(firstVertex: ClientGraphVertex, endVertex: ClientGraphVertex) 
         current = list.pop();
     }
 
-    // Был найден путь
+    // Был найден путь, соберем его вершины
     if (current) {
         const route: ClientGraphVertex[] = [];
 
@@ -183,6 +195,9 @@ function pathFind(firstVertex: ClientGraphVertex, endVertex: ClientGraphVertex) 
     }
 }
 
+/**
+ * Обход графа в ширину
+ */
 export function breadthFirstTraversal(
     firstVertex: ClientGraphVertex,
     callback: (pollution: number, routeLength: number) => boolean,

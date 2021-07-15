@@ -10,8 +10,7 @@ export interface PointPosition {
 }
 
 export interface PointInitialData {
-    edge: ClientGraphEdge;
-    at: number;
+    position: PointPosition;
     speed: number;
     userData?: any;
 }
@@ -35,16 +34,16 @@ export class Point extends EventEmitter<PointEvents> {
     constructor(data: PointInitialData) {
         super();
 
-        this.route = {
-            fromAt: data.at,
-            toAt: data.at,
-            vertices: [data.edge.a, data.edge.b],
-        };
-        this.edgeIndexInRoute = 0;
-
         this.speed = data.speed;
         this.userData = data.userData;
-        this.position = { edge: data.edge, at: data.at };
+        this.position = data.position;
+
+        this.route = {
+            fromAt: this.position.at,
+            toAt: this.position.at,
+            vertices: [this.position.edge.a, this.position.edge.b],
+        };
+        this.edgeIndexInRoute = 0;
     }
 
     public moveTo(toPosition: PointPosition) {

@@ -49,14 +49,6 @@ export function getRouteGeometry(route: Route) {
     }
 
     return coordinates;
-
-    // drawnRoute = {
-    //     path: new mapgl.Polyline(map, {
-    //         coordinates: coordinates.map((c) => projectMapToGeo(c)),
-    //         width: 8,
-    //         color: '#3388ff55',
-    //     }),
-    // };
 }
 
 function getPartGeometry(edge: ClientGraphEdge, fromAt: number, toAt: number) {

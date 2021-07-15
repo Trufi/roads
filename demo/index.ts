@@ -27,10 +27,8 @@ function initialize(data: DataGraph) {
     for (let i = 0; i < 5; i++) {
         const startVertex = roads.findNearestVertex(mapPointFromLngLat(randomPoint()));
         if (startVertex) {
-            const { edge, at } = startVertex;
             const point = roads.createPoint({
-                edge,
-                at,
+                position: startVertex,
                 speed: 50,
             });
 

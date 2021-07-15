@@ -1,5 +1,5 @@
 {
-    "name": "roads",
+    "name": "@trufi/roads",
     "version": "0.0.1",
     "description": "",
     "main": "dist/index.js",
@@ -21,7 +21,7 @@
         "test": "npm run prettier && npm run build"
     },
     "dependencies": {
-        "@trufi/utils": "0.0.2",
+        "@trufi/utils": "0.0.3",
         "@types/rbush": "^3.0.0",
         "rbush": "^3.0.1",
         "tslib": "^2.3.0"

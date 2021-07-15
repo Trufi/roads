@@ -1,4 +1,4 @@
-export { Roads } from './roads';
+export { Roads, RoadsEvents, RoadsOptions } from './roads';
 export {
     ClientGraph,
     ClientGraphEdge,
@@ -7,5 +7,5 @@ export {
     DataGraphEdge,
     DataGraphVertex,
 } from './graph/type';
-export { PointInitialData, Point } from './point';
+export { PointInitialData, Point, PointEvents } from './point';
 export { Route, getRouteGeometry } from './route';
