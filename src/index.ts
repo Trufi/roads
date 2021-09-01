@@ -7,5 +7,5 @@ export {
     DataGraphEdge,
     DataGraphVertex,
 } from './graph/type';
-export { PointInitialData, Point, PointEvents } from './point';
+export { PointInitialData, PointPosition, Point, PointEvents } from './point';
 export { Route, getRouteGeometry } from './route';
