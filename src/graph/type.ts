@@ -25,6 +25,8 @@ export interface ClientGraphVertex {
     coords: number[];
     type: 'road' | 'artificial';
 
+    userData?: any;
+
     /**
      * Инфа, которая используется для алгоритма поиска пути, в остальных случаях не нужно
      */
@@ -62,6 +64,8 @@ export interface ClientGraphEdge {
      * Длина геометрии грани
      */
     length: number;
+
+    userData?: any;
 }
 
 export interface ClientGraph {
@@ -70,4 +74,5 @@ export interface ClientGraph {
     center: number[];
     min: number[];
     max: number[];
+    userData?: any;
 }

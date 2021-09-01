@@ -1,7 +1,7 @@
 import { EventEmitter } from '@trufi/utils';
 import { ClientGraphEdge } from './graph/type';
 import { findEdgeFromVertexToVertex, getSegment } from './graph/utils';
-import { pathFindFromMidway } from './pathfind';
+import { pathfindFromMidway } from './pathfind';
 import { Route } from './route';
 
 export interface PointPosition {
@@ -36,7 +36,10 @@ export class Point extends EventEmitter<PointEvents> {
 
         this.speed = data.speed;
         this.userData = data.userData;
-        this.position = data.position;
+        this.position = {
+            edge: data.position.edge,
+            at: data.position.at,
+        };
 
         this.route = {
             fromAt: this.position.at,
@@ -47,7 +50,7 @@ export class Point extends EventEmitter<PointEvents> {
     }
 
     public moveTo(toPosition: PointPosition) {
-        const route = pathFindFromMidway(this.position, toPosition);
+        const route = pathfindFromMidway(this.position, toPosition);
         if (!route) {
             console.log(`Not found route`);
             return;
@@ -135,7 +138,6 @@ export class Point extends EventEmitter<PointEvents> {
         if (remain < 0) {
             if (isFinalRouteEdge) {
                 position.at = this.route.toAt;
-                this.emit('routefinish');
             } else {
                 this.edgeIndexInRoute++;
                 const maybeEdge = findEdgeFromVertexToVertex(
@@ -149,6 +151,10 @@ export class Point extends EventEmitter<PointEvents> {
                 } else {
                     console.log(`Не найдена следующая кривая пути}`);
                 }
+            }
+
+            if (this.isFinishedRoute()) {
+                this.emit('routefinish');
             }
         }
 

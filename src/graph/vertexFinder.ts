@@ -24,14 +24,26 @@ export interface VertexFinderPosition {
     coords: number[];
 }
 
+interface RBushPoint {
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+    vertex: ClientGraphVertex;
+}
+
 export class VertexFinder {
-    private tree = new RBush<{ vertex: ClientGraphVertex }>();
+    private tree = new RBush<RBushPoint>();
 
     constructor(private graph: ClientGraph) {
         this.tree.load(this.graph.vertices.map((vertex) => createPoint(vertex.coords, vertex)));
     }
 
-    public findNearest(point: number[], minDistance = Infinity) {
+    public findVertices(point: number[], distance: number): ClientGraphVertex[] {
+        return this.tree.search(createPointBBox(point, distance)).map((res) => res.vertex);
+    }
+
+    public findNearest(point: number[], minDistance = Infinity): VertexFinderPosition | undefined {
         const offset = 131072; // половина размера тайла 14-го зума
 
         const vertices = this.tree.search(createPointBBox(point, offset)).map((res) => res.vertex);
@@ -87,7 +99,7 @@ export class VertexFinder {
     }
 }
 
-function createPoint(point: number[], vertex: ClientGraphVertex) {
+function createPoint(point: number[], vertex: ClientGraphVertex): RBushPoint {
     return {
         minX: point[0],
         minY: point[1],

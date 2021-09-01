@@ -12,15 +12,21 @@ const list = new FlatQueue<ClientGraphVertex>();
  */
 let idCounter = 0;
 
-function heuristic(dx: number, dy: number) {
-    return dx + dy;
-}
+export type PathfindHeuristicFunction = (
+    current: ClientGraphVertex,
+    edge: ClientGraphEdge,
+    next: ClientGraphVertex,
+) => number;
 
 /**
  * Поиск пути между точками.
  * Точки могут находится не только на вершинах графа, но и где-то на звеньях.
  */
-export function pathFindFromMidway(from: PointPosition, to: PointPosition): Route | undefined {
+export function pathfindFromMidway(
+    from: PointPosition,
+    to: PointPosition,
+    heuristic?: PathfindHeuristicFunction,
+): Route | undefined {
     if (from.edge === to.edge) {
         const { a, b } = from.edge;
         const vertices = from.at < to.at ? [a, b] : [b, a];
@@ -57,8 +63,18 @@ export function pathFindFromMidway(from: PointPosition, to: PointPosition): Rout
         rightEdge.b.pathFind.artificialEdge = rightEdge;
     }
 
+    if (!heuristic) {
+        // Функция эвристики по умолчанию просто dx + dy между следующим вектором и конечным
+        heuristic = (_current, _edge, next) => {
+            return (
+                Math.abs(next.coords[0] - toVertex.coords[0]) +
+                Math.abs(next.coords[1] - toVertex.coords[1])
+            );
+        };
+    }
+
     // Алгоритм поиска пути
-    let path = pathFind(fromVertex, toVertex);
+    let path = pathfind(fromVertex, toVertex, heuristic);
     if (!path) {
         return;
     }
@@ -145,7 +161,11 @@ function splitEdgeByVertex(edge: ClientGraphEdge, segmentIndex: number, vertex: 
     };
 }
 
-function pathFind(firstVertex: ClientGraphVertex, endVertex: ClientGraphVertex) {
+function pathfind(
+    firstVertex: ClientGraphVertex,
+    endVertex: ClientGraphVertex,
+    heuristic: PathfindHeuristicFunction,
+) {
     const id = idCounter++;
 
     list.clear();
@@ -163,12 +183,7 @@ function pathFind(firstVertex: ClientGraphVertex, endVertex: ClientGraphVertex) 
             const next = anotherEdgeVertex(edge, current);
             if (next.pathFind.id !== id) {
                 next.pathFind.g = current.pathFind.g + edge.length;
-                next.pathFind.f =
-                    next.pathFind.g +
-                    heuristic(
-                        Math.abs(next.coords[0] - endVertex.coords[0]),
-                        Math.abs(next.coords[1] - endVertex.coords[1]),
-                    );
+                next.pathFind.f = next.pathFind.g + heuristic(current, edge, next);
                 next.pathFind.parent = current;
                 next.pathFind.id = id;
                 list.push(next, next.pathFind.f);
@@ -200,13 +215,14 @@ function pathFind(firstVertex: ClientGraphVertex, endVertex: ClientGraphVertex) 
  */
 export function breadthFirstTraversal(
     firstVertex: ClientGraphVertex,
-    callback: (pollution: number, routeLength: number) => boolean,
+    callback: (g: number, routeLength: number) => boolean,
+    heuristic: PathfindHeuristicFunction = () => 0,
 ) {
     const id = idCounter++;
 
     list.clear();
 
-    const pollutionPriorityList = new FlatQueue<ClientGraphVertex>();
+    const priorityList = new FlatQueue<ClientGraphVertex>();
 
     firstVertex.pathFind.f = 0;
     firstVertex.pathFind.g = 0;
@@ -222,15 +238,12 @@ export function breadthFirstTraversal(
             const next = anotherEdgeVertex(edge, current);
             if (next.pathFind.id !== id) {
                 next.pathFind.routeLength = current.pathFind.routeLength + 1;
-                next.pathFind.g =
-                    current.pathFind.g +
-                    edge.length * (edge.pollution + Math.random() * 0.5) -
-                    edge.length / 10;
+                next.pathFind.g = current.pathFind.g + heuristic(current, edge, next);
                 next.pathFind.f = -next.pathFind.g;
                 next.pathFind.parent = current;
                 next.pathFind.id = id;
                 list.push(next, next.pathFind.routeLength);
-                pollutionPriorityList.push(next, -next.pathFind.g);
+                priorityList.push(next, -next.pathFind.g);
             }
         }
 
@@ -241,7 +254,7 @@ export function breadthFirstTraversal(
     if (current) {
         const route: ClientGraphVertex[] = [];
 
-        let first: ClientGraphVertex | undefined = pollutionPriorityList.pop();
+        let first: ClientGraphVertex | undefined = priorityList.pop();
         while (first) {
             route.push(first);
             first = first.pathFind.parent;
