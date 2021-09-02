@@ -2,12 +2,14 @@ export interface DataGraphEdge {
     geometry: number[][];
     a: number;
     b: number;
+    userData?: any;
 }
 
 export interface DataGraphVertex {
     id: number;
     edges: number[];
     coords: number[];
+    userData?: any;
 }
 
 export interface DataGraph {
@@ -17,15 +19,16 @@ export interface DataGraph {
     max: number[];
     vertices: DataGraphVertex[];
     edges: DataGraphEdge[];
+    userData?: any;
 }
 
-export interface ClientGraphVertex {
+export interface ClientGraphVertex<V = any, E = any> {
     index: number;
-    edges: ClientGraphEdge[];
+    edges: ClientGraphEdge<E>[];
     coords: number[];
     type: 'road' | 'artificial';
 
-    userData?: any;
+    userData: V;
 
     /**
      * Инфа, которая используется для алгоритма поиска пути, в остальных случаях не нужно
@@ -43,36 +46,32 @@ export interface ClientGraphVertex {
         /**
          * Предыдущая вершина после выполнения алгоритма поиска пути
          */
-        parent: ClientGraphVertex | undefined;
+        parent: ClientGraphVertex<V> | undefined;
 
-        artificialEdge?: ClientGraphEdge;
+        artificialEdge?: ClientGraphEdge<E>;
     };
 }
 
-export interface ClientGraphEdge {
+export interface ClientGraphEdge<E = any, V = any> {
     index: number;
     geometry: number[][];
-    a: ClientGraphVertex;
-    b: ClientGraphVertex;
+    a: ClientGraphVertex<V>;
+    b: ClientGraphVertex<V>;
     type: 'road' | 'artificial';
-
-    pollution: number;
-
-    enabled: boolean;
 
     /**
      * Длина геометрии грани
      */
     length: number;
 
-    userData?: any;
+    userData: E;
 }
 
-export interface ClientGraph {
-    vertices: ClientGraphVertex[];
-    edges: ClientGraphEdge[];
+export interface ClientGraph<G = any, E = any, V = any> {
+    vertices: ClientGraphVertex<V>[];
+    edges: ClientGraphEdge<E>[];
     center: number[];
     min: number[];
     max: number[];
-    userData?: any;
+    userData: G;
 }

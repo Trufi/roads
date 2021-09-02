@@ -16,6 +16,7 @@ export function createArtificialVertexAndEdges(position: PointPosition) {
             parent: undefined,
         },
         edges: [],
+        userData: {},
     };
 
     const { leftEdge, rightEdge } = splitEdgeByVertex(position.edge, segmentIndex, vertex);
@@ -25,24 +26,22 @@ export function createArtificialVertexAndEdges(position: PointPosition) {
 function splitEdgeByVertex(edge: ClientGraphEdge, segmentIndex: number, vertex: ClientGraphVertex) {
     const leftEdge: ClientGraphEdge = {
         index: -1,
-        enabled: true,
         type: 'artificial',
-        pollution: 0,
         length: 0,
         geometry: [],
         a: edge.a,
         b: vertex,
+        userData: {},
     };
 
     const rightEdge: ClientGraphEdge = {
         index: -1,
-        enabled: true,
         type: 'artificial',
-        pollution: 0,
         length: 0,
         geometry: [],
         a: vertex,
         b: edge.b,
+        userData: {},
     };
 
     for (let i = 0; i < edge.geometry.length; i++) {

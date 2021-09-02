@@ -7,6 +7,6 @@ export {
     DataGraphEdge,
     DataGraphVertex,
 } from './graph/type';
-export { PointInitialData, PointPosition, Point, PointEvents } from './point';
+export { PointInitialData, PointPosition, Point, PointEvents, PointMoveEvent } from './point';
 export { Route, getRouteGeometry } from './route';
 export { breadthFirstTraversalFromMidway, PathfindHeuristicFunction } from './pathfind';

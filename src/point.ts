@@ -15,8 +15,13 @@ export interface PointInitialData {
     userData?: any;
 }
 
+export interface PointMoveEvent<E = any> {
+    passedDistance: number;
+    edge: ClientGraphEdge<E>;
+}
+
 export interface PointEvents {
-    move: undefined;
+    move: PointMoveEvent;
     routefinish: undefined;
 }
 
@@ -108,10 +113,7 @@ export class Point extends EventEmitter<PointEvents> {
             return;
         }
 
-        // Обновляем загрязнение дороги и начисляем очки
-        // const nextPollution = clamp(position.edge.pollution - dx, 0, 1);
-        // this.score += ((position.edge.pollution - nextPollution) * position.edge.length) / 1000;
-        // position.edge.pollution = nextPollution;
+        const eventEdge = position.edge;
 
         let endAt: number;
         if (isFinalRouteEdge) {
@@ -145,6 +147,9 @@ export class Point extends EventEmitter<PointEvents> {
             }
         }
 
-        this.emit('move');
+        this.emit('move', {
+            edge: eventEdge,
+            passedDistance: passedDistanceInEdge,
+        });
     }
 }

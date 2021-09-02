@@ -24,20 +24,24 @@ export function prepareGraph(graph: DataGraph): ClientGraph {
             routeLength: 0,
             parent: undefined,
         };
+
+        clientVertex.userData = vertex.userData ?? {};
     });
 
     graph.edges.forEach((edge, index) => {
         const clientEdge: ClientGraphEdge = edge as any;
         clientEdge.index = index;
-        clientEdge.pollution = 0;
-        clientEdge.enabled = false;
 
         // Заменяем индексы вершин на их ссылки для удобства в дальнейшем
         clientEdge.a = clientGraph.vertices[edge.a];
         clientEdge.b = clientGraph.vertices[edge.b];
 
         clientEdge.length = calcLineLength(clientEdge.geometry);
+
+        clientEdge.userData = edge.userData ?? {};
     });
+
+    clientGraph.userData = graph.userData ?? {};
 
     return clientGraph;
 }

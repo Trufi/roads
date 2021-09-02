@@ -22,9 +22,9 @@ const defaultOptions: Required<RoadsOptions> = {
 };
 
 export class Roads extends EventEmitter<RoadsEvents> {
+    public readonly graph: ClientGraph;
     private options: Required<RoadsOptions>;
     private points: Point[] = [];
-    private graph: ClientGraph;
     private vertexFinder: VertexFinder;
 
     constructor(dataGraph: DataGraph, options: RoadsOptions = defaultOptions) {
