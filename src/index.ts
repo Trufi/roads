@@ -9,4 +9,4 @@ export {
 } from './graph/type';
 export { PointInitialData, PointPosition, Point, PointEvents } from './point';
 export { Route, getRouteGeometry } from './route';
-export { breadthFirstTraversal, PathfindHeuristicFunction } from './pathfind';
+export { breadthFirstTraversalFromMidway, PathfindHeuristicFunction } from './pathfind';

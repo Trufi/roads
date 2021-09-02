@@ -1,8 +1,8 @@
 import { ClientGraphEdge, ClientGraphVertex } from '../graph/type';
-import { getSegment } from '../graph/utils';
 import { PointPosition } from '../point';
 import { Route } from '../route';
 import { FlatQueue } from './flatqueue';
+import { anotherEdgeVertex, createArtificialVertexAndEdges, getVertexEdges } from './utils';
 
 const list = new FlatQueue<ClientGraphVertex>();
 
@@ -19,8 +19,8 @@ export type PathfindHeuristicFunction = (
 ) => number;
 
 /**
- * Поиск пути между точками.
- * Точки могут находится не только на вершинах графа, но и где-то на звеньях.
+ * Алгоритм поиска пути. Работает не только с вершинами графа, но и с промежуточными.
+ * Если конечные точки пути являются промежуточными, то создает искусственные вершины для корректной работы алгоритма.
  */
 export function pathfindFromMidway(
     from: PointPosition,
@@ -39,6 +39,7 @@ export function pathfindFromMidway(
 
     // Если точки "от" и "до" не на вершинах графа,
     // то создаем искусственные вершины для корректной работы алгоритма.
+
     let fromVertex: ClientGraphVertex;
     if (from.at === 0) {
         fromVertex = from.edge.a;
@@ -80,10 +81,17 @@ export function pathfindFromMidway(
     }
 
     // Удаляем созданные искусственные вершины
+
+    // Искусственную вершины старта - это промежуточная вершина расположенная на грани from.
+    // Вместо нее достаточно взять противоположную вершину грани from, которая не попала в путь.
+    // Занулять ничего не нужно, т.к. ничто не указывает на искусственную веришну старта.
     if (fromVertex.type === 'artificial') {
         path[0] = anotherEdgeVertex(from.edge, path[1]);
     }
 
+    // Искусственную вершины старта - это промежуточная вершина расположенная на грани to.
+    // Вместо нее нужно взять противоположную вершину грани to, которая не попала в путь,
+    // а также удалить ссылки вершин грани to на неё.
     if (toVertex.type === 'artificial') {
         toVertex.edges[0].a.pathFind.artificialEdge = undefined;
         toVertex.edges[1].b.pathFind.artificialEdge = undefined;
@@ -94,70 +102,6 @@ export function pathfindFromMidway(
         fromAt: from.at,
         toAt: to.at,
         vertices: path,
-    };
-}
-
-function createArtificialVertexAndEdges(position: PointPosition) {
-    const { segmentIndex, coords } = getSegment(position.edge, position.at);
-    const vertex: ClientGraphVertex = {
-        index: -1,
-        coords,
-        type: 'artificial',
-        pathFind: {
-            f: 0,
-            g: 0,
-            routeLength: 0,
-            id: -1,
-            parent: undefined,
-        },
-        edges: [],
-    };
-
-    const { leftEdge, rightEdge } = splitEdgeByVertex(position.edge, segmentIndex, vertex);
-    return { vertex, leftEdge, rightEdge };
-}
-
-function splitEdgeByVertex(edge: ClientGraphEdge, segmentIndex: number, vertex: ClientGraphVertex) {
-    const leftEdge: ClientGraphEdge = {
-        index: -1,
-        enabled: true,
-        type: 'artificial',
-        pollution: 0,
-        length: 0,
-        geometry: [],
-        a: edge.a,
-        b: vertex,
-    };
-
-    const rightEdge: ClientGraphEdge = {
-        index: -1,
-        enabled: true,
-        type: 'artificial',
-        pollution: 0,
-        length: 0,
-        geometry: [],
-        a: vertex,
-        b: edge.b,
-    };
-
-    for (let i = 0; i < edge.geometry.length; i++) {
-        if (i <= segmentIndex) {
-            leftEdge.geometry.push(edge.geometry[i]);
-        }
-
-        if (i === segmentIndex) {
-            leftEdge.geometry.push(vertex.coords);
-            rightEdge.geometry.push(vertex.coords);
-        }
-
-        if (i > segmentIndex) {
-            rightEdge.geometry.push(edge.geometry[i]);
-        }
-    }
-
-    return {
-        leftEdge,
-        rightEdge,
     };
 }
 
@@ -210,13 +154,50 @@ function pathfind(
     }
 }
 
+export function breadthFirstTraversalFromMidway(
+    from: PointPosition,
+    callback: (g: number, routeLength: number) => boolean,
+    heuristic: PathfindHeuristicFunction = () => 0,
+): Route | undefined {
+    // Если точки "от" не на вершине графа, то создаем искусственную вершину для корректной работы алгоритма.
+    let fromVertex: ClientGraphVertex;
+    if (from.at === 0) {
+        fromVertex = from.edge.a;
+    } else if (from.at === 1) {
+        fromVertex = from.edge.b;
+    } else {
+        const { vertex, leftEdge, rightEdge } = createArtificialVertexAndEdges(from);
+        vertex.edges.push(leftEdge, rightEdge);
+        fromVertex = vertex;
+    }
+
+    const path = breadthFirstTraversal(fromVertex, callback, heuristic);
+    if (!path) {
+        return;
+    }
+
+    // Удаляем созданные искусственные вершины
+    // Искусственную вершины старта - это промежуточная вершина расположенная на грани from.
+    // Вместо нее достаточно взять противоположную вершину грани from, которая не попала в путь.
+    // Занулять ничего не нужно, т.к. ничто не указывает на искусственную веришну старта.
+    if (fromVertex.type === 'artificial') {
+        path[0] = anotherEdgeVertex(from.edge, path[1]);
+    }
+
+    return {
+        fromAt: from.at,
+        vertices: path,
+        toAt: 0, // TODO: тут надо правильно выставлять at
+    };
+}
+
 /**
  * Обход графа в ширину
  */
-export function breadthFirstTraversal(
+function breadthFirstTraversal(
     firstVertex: ClientGraphVertex,
     callback: (g: number, routeLength: number) => boolean,
-    heuristic: PathfindHeuristicFunction = () => 0,
+    heuristic: PathfindHeuristicFunction,
 ) {
     const id = idCounter++;
 
@@ -264,16 +245,4 @@ export function breadthFirstTraversal(
 
         return route;
     }
-}
-
-function getVertexEdges(vertex: ClientGraphVertex) {
-    if (vertex.pathFind.artificialEdge) {
-        return [vertex.pathFind.artificialEdge, ...vertex.edges];
-    }
-
-    return vertex.edges;
-}
-
-function anotherEdgeVertex(edge: ClientGraphEdge, from: ClientGraphVertex) {
-    return edge.a === from ? edge.b : edge.a;
 }

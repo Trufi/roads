@@ -149,7 +149,7 @@ export class Point extends EventEmitter<PointEvents> {
                     position.edge = maybeEdge.edge;
                     this.forward = maybeEdge.forward;
                 } else {
-                    console.log(`Не найдена следующая кривая пути}`);
+                    console.log(`Не найдена следующая кривая пути`);
                 }
             }
 
