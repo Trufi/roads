@@ -1,6 +1,7 @@
 import { ClientGraphEdge, ClientGraphVertex } from '../graph/type';
+import { findEdgeFromVertexToVertex } from '../graph/utils';
 import { PointPosition } from '../point';
-import { Route } from '../route';
+import { EdgeWithDirection, Route } from '../route';
 import { FlatQueue } from './flatqueue';
 import { anotherEdgeVertex, createArtificialVertexAndEdges, getVertexEdges } from './utils';
 
@@ -28,17 +29,16 @@ export function pathfindFromMidway(
     heuristic?: PathfindHeuristicFunction,
 ): Route | undefined {
     if (from.edge === to.edge) {
-        const { a, b } = from.edge;
-        const vertices = from.at < to.at ? [a, b] : [b, a];
         return {
             fromAt: from.at,
             toAt: to.at,
-            vertices,
+            edges: [{ edge: from.edge, forward: from.at < to.at }],
         };
     }
 
-    // Если точки "от" и "до" не на вершинах графа,
-    // то создаем искусственные вершины для корректной работы алгоритма.
+    /**
+     * Создаем искусственные вершины, если точки "от" и "до" не на вершинах графа.
+     */
 
     let fromVertex: ClientGraphVertex;
     if (from.at === 0) {
@@ -74,13 +74,17 @@ export function pathfindFromMidway(
         };
     }
 
-    // Алгоритм поиска пути
+    /**
+     * Алгоритм поиска пути
+     */
     let path = pathfind(fromVertex, toVertex, heuristic);
     if (!path) {
         return;
     }
 
-    // Удаляем созданные искусственные вершины
+    /**
+     * Удаляем созданные искусственные вершины
+     */
 
     // Искусственную вершины старта - это промежуточная вершина расположенная на грани from.
     // Вместо нее достаточно взять противоположную вершину грани from, которая не попала в путь.
@@ -98,10 +102,54 @@ export function pathfindFromMidway(
         path[path.length - 1] = anotherEdgeVertex(to.edge, path[path.length - 2]);
     }
 
+    /**
+     * Получаем массив граней с направлением движения из массива вершин поиска пути
+     */
+    const edges: EdgeWithDirection[] = [];
+    for (let i = 0; i < path.length - 1; i++) {
+        const first = path[i];
+        const second = path[i + 1];
+        const result = findEdgeFromVertexToVertex(first, second);
+        if (!result) {
+            throw new Error(`Не найдена грань между вершинами: ${first.index} и ${second.index}`);
+        }
+        edges.push(result);
+    }
+
+    /**
+     * Проверяем, что первая и последняя грани совпадают с гранями юзера.
+     * Алгоритм поиска работает с вершинами, поэтому "пустая грань", вполне могла схлопнуться.
+     * Пустые грань - это та, по которой точке не нужно будет двигаться. Например, at = 0 и путь ведет в обратном направлении.
+     */
+
+    let fromAt = from.at;
+    const firstEdge = edges[0];
+    if (firstEdge.edge !== from.edge) {
+        if (from.at === 0 || from.at === 1) {
+            fromAt = firstEdge.forward ? 0 : 1;
+        } else {
+            throw new Error(
+                `Первая грань составленная из вершин поиска пути ${firstEdge.edge.index} не равна исходной ${from.edge.index}`,
+            );
+        }
+    }
+
+    let toAt = to.at;
+    const lastEdge = edges[edges.length - 1];
+    if (lastEdge.edge !== to.edge) {
+        if (to.at === 0 || to.at === 1) {
+            toAt = lastEdge.forward ? 0 : 1;
+        } else {
+            throw new Error(
+                `Последняя грань составленная из вершин поиска пути ${firstEdge.edge.index} не равна исходной ${to.edge.index}`,
+            );
+        }
+    }
+
     return {
-        fromAt: from.at,
-        toAt: to.at,
-        vertices: path,
+        fromAt,
+        toAt,
+        edges,
     };
 }
 
@@ -184,10 +232,44 @@ export function breadthFirstTraversalFromMidway(
         path[0] = anotherEdgeVertex(from.edge, path[1]);
     }
 
+    /**
+     * Получаем массив граней с направлением движения из массива вершин поиска пути
+     */
+    const edges: EdgeWithDirection[] = [];
+    for (let i = 0; i < path.length - 1; i++) {
+        const first = path[i];
+        const second = path[i + 1];
+        const result = findEdgeFromVertexToVertex(first, second);
+        if (!result) {
+            throw new Error(`Не найдена грань между вершинами: ${first.index} и ${second.index}`);
+        }
+        edges.push(result);
+    }
+
+    /**
+     * Проверяем, что первая грань совпадает с гранью юзера.
+     * Алгоритм поиска работает с вершинами, поэтому "пустая грань", вполне могла схлопнуться.
+     * Пустые грань - это та, по которой точке не нужно будет двигаться. Например, at = 0 и путь ведет в обратном направлении.
+     */
+    let fromAt = from.at;
+    const firstEdge = edges[0];
+    if (firstEdge.edge !== from.edge) {
+        if (from.at === 0 || from.at === 1) {
+            fromAt = firstEdge.forward ? 0 : 1;
+        } else {
+            throw new Error(
+                `Первая грань составленная из вершин поиска пути ${firstEdge.edge.index} не равна исходной ${from.edge.index}`,
+            );
+        }
+    }
+
+    const lastEdge = edges[edges.length - 1];
+    const toAt = lastEdge.forward ? 1 : 0;
+
     return {
-        fromAt: from.at,
-        vertices: path,
-        toAt: 0, // TODO: тут надо правильно выставлять at
+        fromAt,
+        edges,
+        toAt,
     };
 }
 

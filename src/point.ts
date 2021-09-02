@@ -1,6 +1,6 @@
 import { EventEmitter } from '@trufi/utils';
 import { ClientGraphEdge } from './graph/type';
-import { findEdgeFromVertexToVertex, getSegment } from './graph/utils';
+import { getSegment } from './graph/utils';
 import { pathfindFromMidway } from './pathfind';
 import { Route } from './route';
 
@@ -44,7 +44,7 @@ export class Point extends EventEmitter<PointEvents> {
         this.route = {
             fromAt: this.position.at,
             toAt: this.position.at,
-            vertices: [this.position.edge.a, this.position.edge.b],
+            edges: [{ edge: this.position.edge, forward: true }],
         };
         this.edgeIndexInRoute = 0;
     }
@@ -60,23 +60,17 @@ export class Point extends EventEmitter<PointEvents> {
     }
 
     public setRoute(route: Route) {
-        const { fromAt, vertices, toAt } = route;
-
-        const maybeEdge = findEdgeFromVertexToVertex(vertices[0], vertices[1]);
-        if (!maybeEdge) {
-            console.log(`Не найдена кривая пути`);
-            return;
-        }
+        const { fromAt, edges, toAt } = route;
 
         this.route.fromAt = fromAt;
-        this.route.vertices = vertices;
+        this.route.edges = edges;
         this.route.toAt = toAt;
         this.edgeIndexInRoute = 0;
 
         this.position.at = fromAt;
-        this.position.edge = maybeEdge.edge;
+        this.position.edge = edges[0].edge;
 
-        this.forward = maybeEdge.forward;
+        this.forward = edges[0].forward;
     }
 
     public getRoute() {
@@ -97,7 +91,7 @@ export class Point extends EventEmitter<PointEvents> {
     }
 
     public isFinishedRoute() {
-        const isFinalRouteEdge = this.edgeIndexInRoute === this.route.vertices.length - 2;
+        const isFinalRouteEdge = this.edgeIndexInRoute === this.route.edges.length - 1;
         return isFinalRouteEdge && this.position.at === this.route.toAt;
     }
 
@@ -109,7 +103,7 @@ export class Point extends EventEmitter<PointEvents> {
         this.lastUpdateTime = time;
         const dx = position.edge.length ? passedDistanceInEdge / position.edge.length : 1;
 
-        const isFinalRouteEdge = this.edgeIndexInRoute === this.route.vertices.length - 2;
+        const isFinalRouteEdge = this.edgeIndexInRoute === this.route.edges.length - 1;
         if (isFinalRouteEdge && position.at === this.route.toAt) {
             return;
         }
@@ -140,17 +134,10 @@ export class Point extends EventEmitter<PointEvents> {
                 position.at = this.route.toAt;
             } else {
                 this.edgeIndexInRoute++;
-                const maybeEdge = findEdgeFromVertexToVertex(
-                    this.route.vertices[this.edgeIndexInRoute],
-                    this.route.vertices[this.edgeIndexInRoute + 1],
-                );
-                if (maybeEdge) {
-                    position.at = maybeEdge.forward ? 0 : 1;
-                    position.edge = maybeEdge.edge;
-                    this.forward = maybeEdge.forward;
-                } else {
-                    console.log(`Не найдена следующая кривая пути`);
-                }
+                const edge = this.route.edges[this.edgeIndexInRoute];
+                position.at = edge.forward ? 0 : 1;
+                position.edge = edge.edge;
+                this.forward = edge.forward;
             }
 
             if (this.isFinishedRoute()) {
