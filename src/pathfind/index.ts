@@ -202,10 +202,20 @@ function pathfind(
     }
 }
 
+/**
+ * Функция задающая приоритет вершин.
+ * Если возвращает undefined, то обход графа в этом направлении останавливается.
+ */
+export type BreadthFirstTraversalPriority = (
+    routeLength: number,
+    next: ClientGraphVertex,
+    current: ClientGraphVertex,
+    edge: ClientGraphEdge,
+) => number | undefined;
+
 export function breadthFirstTraversalFromMidway(
     from: PointPosition,
-    callback: (g: number, routeLength: number) => boolean,
-    heuristic: PathfindHeuristicFunction = () => 0,
+    priorityFunction: BreadthFirstTraversalPriority,
 ): Route | undefined {
     // Если точки "от" не на вершине графа, то создаем искусственную вершину для корректной работы алгоритма.
     let fromVertex: ClientGraphVertex;
@@ -219,8 +229,8 @@ export function breadthFirstTraversalFromMidway(
         fromVertex = vertex;
     }
 
-    const path = breadthFirstTraversal(fromVertex, callback, heuristic);
-    if (!path) {
+    const path = breadthFirstTraversal(fromVertex, priorityFunction);
+    if (!path || path.length < 2) {
         return;
     }
 
@@ -278,8 +288,7 @@ export function breadthFirstTraversalFromMidway(
  */
 function breadthFirstTraversal(
     firstVertex: ClientGraphVertex,
-    callback: (g: number, routeLength: number) => boolean,
-    heuristic: PathfindHeuristicFunction,
+    priorityFunction: BreadthFirstTraversalPriority,
 ) {
     const id = idCounter++;
 
@@ -294,15 +303,24 @@ function breadthFirstTraversal(
     firstVertex.pathFind.parent = undefined;
 
     list.push(firstVertex, 0);
+    priorityList.push(firstVertex, 0);
 
     let current = list.pop();
-    while (current && callback(current.pathFind.g, current.pathFind.routeLength)) {
+    while (current) {
         for (const edge of getVertexEdges(current)) {
             const next = anotherEdgeVertex(edge, current);
-            if (next.pathFind.id !== id) {
-                next.pathFind.routeLength = current.pathFind.routeLength + 1;
-                next.pathFind.g = current.pathFind.g + heuristic(current, edge, next);
-                next.pathFind.f = -next.pathFind.g;
+
+            if (next.pathFind.id === id) {
+                continue;
+            }
+
+            const routeLength = current.pathFind.routeLength + 1;
+            const priority = priorityFunction(routeLength, next, current, edge);
+
+            if (priority !== undefined) {
+                next.pathFind.routeLength = routeLength;
+                next.pathFind.g = current.pathFind.g + priority;
+                next.pathFind.f = 0;
                 next.pathFind.parent = current;
                 next.pathFind.id = id;
                 list.push(next, next.pathFind.routeLength);
@@ -313,18 +331,14 @@ function breadthFirstTraversal(
         current = list.pop();
     }
 
-    // Был найден путь
-    if (current) {
-        const route: ClientGraphVertex[] = [];
-
-        let first: ClientGraphVertex | undefined = priorityList.pop();
-        while (first) {
-            route.push(first);
-            first = first.pathFind.parent;
-        }
-
-        route.reverse();
-
-        return route;
+    const route: ClientGraphVertex[] = [];
+    let first: ClientGraphVertex | undefined = priorityList.pop();
+    while (first) {
+        route.push(first);
+        first = first.pathFind.parent;
     }
+
+    route.reverse();
+
+    return route;
 }

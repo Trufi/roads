@@ -131,7 +131,8 @@ export class Point extends EventEmitter<PointEvents> {
             remain = position.at - endAt;
         }
 
-        if (remain < 0) {
+        // Сравнение не строгое, т.к. remain === 0 при edge.length === 0
+        if (remain <= 0) {
             if (isFinalRouteEdge) {
                 position.at = this.route.toAt;
             } else {
