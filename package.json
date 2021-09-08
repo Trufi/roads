@@ -1,6 +1,6 @@
 {
     "name": "@trufi/roads",
-    "version": "0.0.6",
+    "version": "0.0.7",
     "description": "Library to simulate moving objects on the map",
     "main": "dist/index.js",
     "repository": {

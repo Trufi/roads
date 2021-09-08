@@ -101,6 +101,11 @@ export class Point extends EventEmitter<PointEvents> {
     }
 
     public updateMoving(time: number) {
+        if (this.lastUpdateTime === 0) {
+            this.lastUpdateTime = time;
+            return;
+        }
+
         const { position } = this;
 
         const passedDistanceInEdge = this.speed * (time - this.lastUpdateTime);
