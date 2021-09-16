@@ -1,4 +1,4 @@
-import { EventEmitter } from '@trufi/utils';
+import { EventEmitter } from '@trufi/utils/common/eventEmitter';
 import { ClientGraphEdge } from './graph/type';
 import { getSegment } from './graph/utils';
 import { pathfindFromMidway } from './pathfind';
