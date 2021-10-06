@@ -1,3 +1,5 @@
+import { Point } from '..';
+
 export interface DataGraphEdge {
     geometry: number[][];
     a: number;
@@ -63,6 +65,8 @@ export interface ClientGraphEdge<E = any, V = any> {
      * Длина геометрии грани
      */
     length: number;
+
+    points: Set<Point>;
 
     userData: E;
 }

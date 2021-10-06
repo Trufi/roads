@@ -39,6 +39,8 @@ export function prepareGraph(graph: DataGraph): ClientGraph {
         clientEdge.length = calcLineLength(clientEdge.geometry);
 
         clientEdge.userData = edge.userData ?? {};
+
+        clientEdge.points = new Set();
     });
 
     clientGraph.userData = graph.userData ?? {};
