@@ -33,10 +33,10 @@ export class Point extends EventEmitter<PointEvents> {
 
     public forward = true;
     private lastUpdateTime = 0;
-    private nextPointOnEdge?: Point;
-    private prevPointOnEdge?: Point;
+    private next?: Point;
+    private prev?: Point;
 
-    public position: PointPosition;
+    private position: PointPosition;
     private edgeIndexInRoute: number;
     private readonly route: Route;
 
@@ -71,19 +71,10 @@ export class Point extends EventEmitter<PointEvents> {
     public setRoute(route: Route) {
         const { fromAt, edges, toAt } = route;
 
-        if (this.prevPointOnEdge?.nextPointOnEdge === this) {
-            this.prevPointOnEdge.nextPointOnEdge = this.nextPointOnEdge;
-        }
-        if (this.nextPointOnEdge?.prevPointOnEdge === this) {
-            this.nextPointOnEdge.prevPointOnEdge = this.prevPointOnEdge;
-        }
-        const prevEdge = this.position.edge;
-        if (prevEdge.forwardLastPoint === this) {
-            prevEdge.forwardLastPoint = this.nextPointOnEdge;
-        } else if (prevEdge.reverseLastPoint === this) {
-            prevEdge.reverseLastPoint = this.nextPointOnEdge;
-        }
+        // Удаляем точку с текущего ребра
+        this.removeFromEdge();
 
+        // Добавляем точку на новое ребро
         this.route.fromAt = fromAt;
         this.route.edges = edges;
         this.route.toAt = toAt;
@@ -94,7 +85,7 @@ export class Point extends EventEmitter<PointEvents> {
 
         this.forward = edges[0].forward;
 
-        this.updatePointConnectionsOnEdge();
+        this.updatePointConnections();
     }
 
     public getRoute() {
@@ -131,7 +122,7 @@ export class Point extends EventEmitter<PointEvents> {
 
         this.lastUpdateTime = time;
 
-        if (!this.hasSpaceForMovingOnCurrentEdge()) {
+        if (!this.hasSpaceOnCurrentEdge()) {
             return;
         }
 
@@ -166,31 +157,28 @@ export class Point extends EventEmitter<PointEvents> {
             if (isFinalRouteEdge) {
                 position.at = this.route.toAt;
             } else {
+                // Точки готова двигаться по следующему ребру:
                 const newEdge = this.route.edges[this.edgeIndexInRoute + 1];
-
-                if (!this.hasSpaceForMovingOnNextEdge(newEdge)) {
+                // 1. Проверяем, есть ли там место для нее
+                if (!this.hasSpaceOnNextEdge(newEdge)) {
                     return;
                 }
-                const prevEdge = this.position.edge;
-                if (prevEdge.forwardLastPoint === this) {
-                    prevEdge.forwardLastPoint = undefined;
-                } else if (prevEdge.reverseLastPoint === this) {
-                    prevEdge.reverseLastPoint = undefined;
-                }
 
+                // 2. Удаляем информацию о точки со старого ребра
+                this.removeFromEdge();
+
+                // 3. Добавляем на новое ребро в начало пути, но в конец списка точек
                 if (newEdge.forward) {
-                    this.nextPointOnEdge = newEdge.edge.forwardLastPoint;
+                    this.next = newEdge.edge.forwardLastPoint;
                     newEdge.edge.forwardLastPoint = this;
                 } else {
-                    this.nextPointOnEdge = newEdge.edge.reverseLastPoint;
+                    this.next = newEdge.edge.reverseLastPoint;
                     newEdge.edge.reverseLastPoint = this;
                 }
-                if (this.nextPointOnEdge) {
-                    this.nextPointOnEdge.prevPointOnEdge = this;
-                }
-                if (this.prevPointOnEdge) {
-                    this.prevPointOnEdge.nextPointOnEdge = undefined;
-                    this.prevPointOnEdge = undefined;
+
+                // 4. Устанавливаем связь со следующей точкой
+                if (this.next) {
+                    this.next.prev = this;
                 }
 
                 this.edgeIndexInRoute++;
@@ -214,18 +202,25 @@ export class Point extends EventEmitter<PointEvents> {
         });
     }
 
-    private hasSpaceForMovingOnCurrentEdge(): Boolean {
-        if (!this.nextPointOnEdge) {
+    /**
+     * Проверяет, есть ли на текущем ребре место для движения.
+     */
+    private hasSpaceOnCurrentEdge(): Boolean {
+        if (!this.next) {
             return true;
         }
-
-        const nextPointAt = this.nextPointOnEdge.position.at;
+        const nextPointAt = this.next.position.at;
         return (
             Math.abs(nextPointAt - this.position.at) * this.position.edge.length > distanceBetween
         );
     }
 
-    private hasSpaceForMovingOnNextEdge(nextEdge: EdgeWithDirection): Boolean {
+    /**
+     * Проверяет, есть ли на следующем ребре место для появления этой точки.
+     * Должен использоваться только при движении по пути,
+     * когда точка закончила движения по ребру и собирается двигаться по следующему.
+     */
+    private hasSpaceOnNextEdge(nextEdge: EdgeWithDirection): Boolean {
         const lastPoint = nextEdge.forward
             ? nextEdge.edge.forwardLastPoint
             : nextEdge.edge.reverseLastPoint;
@@ -238,7 +233,11 @@ export class Point extends EventEmitter<PointEvents> {
         return Math.abs(nextPointAt - thisAt) * nextEdge.edge.length > distanceBetween;
     }
 
-    private updatePointConnectionsOnEdge() {
+    /**
+     * Метод должен вызываться после вставки точки на ребро.
+     * Ищет соседнии точки с новой, устанавливает связи между ними.
+     */
+    private updatePointConnections() {
         let prevPoint: Point | undefined;
         let nextPoint = this.forward
             ? this.position.edge.forwardLastPoint
@@ -250,10 +249,42 @@ export class Point extends EventEmitter<PointEvents> {
                 (!this.forward && nextPoint.position.at > this.position.at))
         ) {
             prevPoint = nextPoint;
-            nextPoint = nextPoint.nextPointOnEdge;
+            nextPoint = nextPoint.next;
         }
 
-        this.nextPointOnEdge = nextPoint;
-        this.prevPointOnEdge = prevPoint;
+        this.next = nextPoint;
+        this.prev = prevPoint;
+
+        if (this.next) {
+            this.next.prev = this;
+        }
+        if (this.prev) {
+            this.prev.next = this;
+        }
+    }
+
+    /**
+     * 1. Соединяет предыдущую и следующую точку друг с другом
+     * 2. Удаляет с ребра информацию о точке, если она была последней.
+     * 3. Оставляет в ребре следующую точку, если она есть.
+     *
+     * Работает для:
+     * - Удаляение точки с ребра при выставлении нового пути
+     * - Удалении точки с ребра при переходе на следующее
+     */
+    private removeFromEdge() {
+        if (this.prev?.next === this) {
+            this.prev.next = this.next;
+        }
+        if (this.next?.prev === this) {
+            this.next.prev = this.prev;
+        }
+
+        const edge = this.position.edge;
+        if (edge.forwardLastPoint === this) {
+            edge.forwardLastPoint = this.next;
+        } else if (edge.reverseLastPoint === this) {
+            edge.reverseLastPoint = this.next;
+        }
     }
 }
