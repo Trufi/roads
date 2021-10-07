@@ -26,6 +26,7 @@ export class Roads extends EventEmitter<RoadsEvents> {
     private options: Required<RoadsOptions>;
     private points: Point[] = [];
     private vertexFinder: VertexFinder;
+    private lastUpdateTime: number = Date.now();
 
     constructor(dataGraph: DataGraph, options: RoadsOptions = defaultOptions) {
         super();
@@ -58,14 +59,16 @@ export class Roads extends EventEmitter<RoadsEvents> {
         return coords;
     }
 
-    public update(time: number) {
-        this.points.forEach((point) => point.updateMoving(time));
+    public update(dt: number) {
+        this.points.forEach((point) => point.updateMoving(dt));
         this.emit('update');
     }
 
     private updateLoop = () => {
         requestAnimationFrame(this.updateLoop);
         const time = Date.now();
-        this.update(time);
+        const dt = time - this.lastUpdateTime;
+        this.update(dt);
+        this.lastUpdateTime = time;
     };
 }

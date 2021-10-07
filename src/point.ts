@@ -4,8 +4,6 @@ import { getSegment } from './graph/utils';
 import { pathfindFromMidway } from './pathfind';
 import { EdgeWithDirection, Route } from './route';
 
-const distanceBetween = 10 * 100;
-
 export interface PointPosition {
     edge: ClientGraphEdge;
     at: number;
@@ -15,6 +13,7 @@ export interface PointInitialData {
     position: PointPosition;
     speed: number;
     userData?: any;
+    keepingDistance?: number;
 }
 
 export interface PointMoveEvent<E = any> {
@@ -28,17 +27,25 @@ export interface PointEvents {
 }
 
 export class Point extends EventEmitter<PointEvents> {
-    public userData: any;
+    public readonly userData: any;
     private speed: number;
 
-    public forward = true;
-    private lastUpdateTime = 0;
+    private forward = true;
+
+    /**
+     * Если точка находится на ребре, то здесь хранится следующая точка с этого ребра по направлению движения
+     */
     private next?: Point;
+
+    /**
+     * Если точка находится на ребре, то здесь хранится предыдущая точка с этого ребра по направлению движения
+     */
     private prev?: Point;
 
-    private position: PointPosition;
+    private readonly position: PointPosition;
     private edgeIndexInRoute: number;
     private readonly route: Route;
+    private readonly keepingDistance: number | undefined;
 
     constructor(data: PointInitialData) {
         super();
@@ -56,6 +63,8 @@ export class Point extends EventEmitter<PointEvents> {
             edges: [{ edge: this.position.edge, forward: true }],
         };
         this.edgeIndexInRoute = 0;
+
+        this.keepingDistance = data.keepingDistance;
     }
 
     public moveTo(toPosition: PointPosition) {
@@ -110,17 +119,9 @@ export class Point extends EventEmitter<PointEvents> {
         return isFinalRouteEdge && this.position.at === this.route.toAt;
     }
 
-    public updateMoving(time: number) {
-        if (this.lastUpdateTime === 0) {
-            this.lastUpdateTime = time;
-            return;
-        }
-
+    public updateMoving(dt: number) {
         const { position } = this;
-
-        const passedDistanceInEdge = this.speed * (time - this.lastUpdateTime);
-
-        this.lastUpdateTime = time;
+        const passedDistanceInEdge = this.speed * dt;
 
         if (!this.hasSpaceOnCurrentEdge()) {
             return;
@@ -206,12 +207,13 @@ export class Point extends EventEmitter<PointEvents> {
      * Проверяет, есть ли на текущем ребре место для движения.
      */
     private hasSpaceOnCurrentEdge(): Boolean {
-        if (!this.next) {
+        if (this.keepingDistance === undefined || !this.next) {
             return true;
         }
         const nextPointAt = this.next.position.at;
         return (
-            Math.abs(nextPointAt - this.position.at) * this.position.edge.length > distanceBetween
+            Math.abs(nextPointAt - this.position.at) * this.position.edge.length >
+            this.keepingDistance
         );
     }
 
@@ -221,6 +223,9 @@ export class Point extends EventEmitter<PointEvents> {
      * когда точка закончила движения по ребру и собирается двигаться по следующему.
      */
     private hasSpaceOnNextEdge(nextEdge: EdgeWithDirection): Boolean {
+        if (this.keepingDistance === undefined) {
+            return true;
+        }
         const lastPoint = nextEdge.forward
             ? nextEdge.edge.forwardLastPoint
             : nextEdge.edge.reverseLastPoint;
@@ -230,7 +235,7 @@ export class Point extends EventEmitter<PointEvents> {
 
         const thisAt = nextEdge.forward ? 0 : 1;
         const nextPointAt = lastPoint.position.at;
-        return Math.abs(nextPointAt - thisAt) * nextEdge.edge.length > distanceBetween;
+        return Math.abs(nextPointAt - thisAt) * nextEdge.edge.length > this.keepingDistance;
     }
 
     /**
