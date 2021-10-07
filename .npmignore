@@ -1,0 +1,13 @@
+.vscode/
+.idea/
+.DS_Store
+npm-debug.log
+yarn.lock
+node_modules/
+dist/
+demo/
+.github/
+webpack.config.js
+prettier.config.js
+tsconfig.json
+.prettierignore
