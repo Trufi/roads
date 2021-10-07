@@ -20,9 +20,10 @@ jobs:
         run: |
           npm ci
           npm run builddemo
+          cp -r dist public
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@4.1.4
         with:
           branch: gh-pages
-          folder: demo
+          folder: demo/public
