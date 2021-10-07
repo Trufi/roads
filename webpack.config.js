@@ -10,7 +10,7 @@ module.exports = (env) => {
         module: {
             rules: [
                 {
-                    test: /(\.ts|\.tsx)$/,
+                    test: /\.ts$/,
                     exclude: /node_modules/,
                     use: {
                         loader: 'ts-loader',
@@ -41,12 +41,13 @@ module.exports = (env) => {
         devServer: {
             host: '0.0.0.0',
             port: 3000,
-            stats: {
-                modules: false,
+            allowedHosts: 'all',
+            client: {
+                overlay: false,
             },
-            disableHostCheck: true,
-            contentBase: path.join(__dirname, 'demo'),
-            publicPath: '/dist',
+            static: {
+                directory: path.join(__dirname, 'demo/public'),
+            },
         },
     };
 };

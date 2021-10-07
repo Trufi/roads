@@ -26,12 +26,6 @@ export function startDistanceExample() {
             label: { text: 'Stop', fontSize: 12 },
         });
         const roads = new Roads(data);
-
-        const points: Array<{
-            point: Point;
-            marker: mapgl.Marker;
-        }> = [];
-
         const iconRadius = 5;
 
         const firstRoute = [
@@ -97,8 +91,6 @@ export function startDistanceExample() {
             point.on('move', () => {
                 marker.setCoordinates(mapPointToLngLat(point.getCoords()));
             });
-
-            points.push({ point, marker });
         }
 
         for (let i = 0; i < 20; i++) {
