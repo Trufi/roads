@@ -71,9 +71,17 @@ export class Point extends EventEmitter<PointEvents> {
     public setRoute(route: Route) {
         const { fromAt, edges, toAt } = route;
 
-        if (this.prevPointOnEdge) {
-            this.prevPointOnEdge.nextPointOnEdge = undefined;
-            this.prevPointOnEdge = undefined;
+        if (this.prevPointOnEdge?.nextPointOnEdge === this) {
+            this.prevPointOnEdge.nextPointOnEdge = this.nextPointOnEdge;
+        }
+        if (this.nextPointOnEdge?.prevPointOnEdge === this) {
+            this.nextPointOnEdge.prevPointOnEdge = this.prevPointOnEdge;
+        }
+        const prevEdge = this.position.edge;
+        if (prevEdge.forwardLastPoint === this) {
+            prevEdge.forwardLastPoint = this.nextPointOnEdge;
+        } else if (prevEdge.reverseLastPoint === this) {
+            prevEdge.reverseLastPoint = this.nextPointOnEdge;
         }
 
         this.route.fromAt = fromAt;
@@ -86,16 +94,7 @@ export class Point extends EventEmitter<PointEvents> {
 
         this.forward = edges[0].forward;
 
-        if (this.forward) {
-            this.nextPointOnEdge = this.position.edge.forwardLastPoint;
-            this.position.edge.forwardLastPoint = this;
-        } else {
-            this.nextPointOnEdge = this.position.edge.reverseLastPoint;
-            this.position.edge.reverseLastPoint = this;
-        }
-        if (this.nextPointOnEdge) {
-            this.nextPointOnEdge.prevPointOnEdge = this;
-        }
+        this.updatePointConnectionsOnEdge();
     }
 
     public getRoute() {
@@ -231,5 +230,23 @@ export class Point extends EventEmitter<PointEvents> {
         const thisAt = nextEdge.forward ? 0 : 1;
         const nextPointAt = lastPoint.position.at;
         return Math.abs(nextPointAt - thisAt) * nextEdge.edge.length > distanceBetween;
+    }
+
+    private updatePointConnectionsOnEdge() {
+        let prevPoint: Point | undefined;
+        let nextPoint = this.forward
+            ? this.position.edge.forwardLastPoint
+            : this.position.edge.reverseLastPoint;
+        while (
+            nextPoint !== undefined &&
+            ((this.forward && nextPoint.position.at < this.position.at) ||
+                (!this.forward && nextPoint.position.at > this.position.at))
+        ) {
+            prevPoint = nextPoint;
+            nextPoint = nextPoint.nextPointOnEdge;
+        }
+
+        this.nextPointOnEdge = nextPoint;
+        this.prevPointOnEdge = prevPoint;
     }
 }
