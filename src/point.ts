@@ -171,6 +171,12 @@ export class Point extends EventEmitter<PointEvents> {
                 if (!this.hasSpaceForMovingOnNextEdge(newEdge)) {
                     return;
                 }
+                const prevEdge = this.position.edge;
+                if (prevEdge.forwardLastPoint === this) {
+                    prevEdge.forwardLastPoint = undefined;
+                } else if (prevEdge.reverseLastPoint === this) {
+                    prevEdge.reverseLastPoint = undefined;
+                }
 
                 if (newEdge.forward) {
                     this.nextPointOnEdge = newEdge.edge.forwardLastPoint;
@@ -237,6 +243,7 @@ export class Point extends EventEmitter<PointEvents> {
         let nextPoint = this.forward
             ? this.position.edge.forwardLastPoint
             : this.position.edge.reverseLastPoint;
+
         while (
             nextPoint !== undefined &&
             ((this.forward && nextPoint.position.at < this.position.at) ||

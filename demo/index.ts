@@ -69,6 +69,7 @@ function initialize(data: DataGraph) {
             speed: 15,
             position: positions[positionIndex],
         });
+        (point as any).t = t;
 
         const marker = new mapgl.Marker(map, {
             coordinates: mapPointToLngLat(point.getCoords()),
@@ -78,6 +79,9 @@ function initialize(data: DataGraph) {
                 text: `${t++}`,
                 fontSize: 6,
             },
+        });
+        marker.on('click', () => {
+            console.log(point);
         });
         function getNextRoute() {
             setTimeout(() => {
