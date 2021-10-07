@@ -32,6 +32,7 @@ function splitEdgeByVertex(edge: ClientGraphEdge, segmentIndex: number, vertex: 
         a: edge.a,
         b: vertex,
         userData: {},
+        oneWay: edge.oneWay,
     };
 
     const rightEdge: ClientGraphEdge = {
@@ -42,6 +43,7 @@ function splitEdgeByVertex(edge: ClientGraphEdge, segmentIndex: number, vertex: 
         a: vertex,
         b: edge.b,
         userData: {},
+        oneWay: edge.oneWay,
     };
 
     for (let i = 0; i < edge.geometry.length; i++) {

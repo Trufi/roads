@@ -1,7 +1,7 @@
 import { DataGraph } from './type';
 
 const roundFactor = 100;
-const supportedFormatVersion = 1;
+const supportedFormatVersion = 2;
 
 export function unpackGraph(graph: DataGraph) {
     if (graph.formatVersion !== supportedFormatVersion) {
@@ -39,6 +39,7 @@ export function unpackGraph(graph: DataGraph) {
     graph.edges.forEach((e) => {
         e.a = deltaDecode(e.a);
         e.b = deltaDecode(e.b);
+        e.oneWay = Boolean(e.oneWay);
 
         if (e.geometry === undefined) {
             e.geometry = [graph.vertices[e.a].coords, graph.vertices[e.b].coords];

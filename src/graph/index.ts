@@ -34,6 +34,7 @@ export function prepareGraph(graph: DataGraph): ClientGraph {
         b: vertices[edge.b],
 
         geometry: edge.geometry,
+        oneWay: edge.oneWay,
         length: calcLineLength(edge.geometry),
 
         userData: edge.userData ?? {},

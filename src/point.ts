@@ -265,6 +265,12 @@ export class Point extends EventEmitter<PointEvents> {
         }
         if (this.prev) {
             this.prev.next = this;
+        } else {
+            if (this.forward) {
+                this.position.edge.forwardLastPoint = this;
+            } else {
+                this.position.edge.reverseLastPoint = this;
+            }
         }
     }
 

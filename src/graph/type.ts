@@ -4,6 +4,7 @@ export interface DataGraphEdge {
     geometry: number[][];
     a: number;
     b: number;
+    oneWay: boolean;
     userData?: any;
 }
 
@@ -75,6 +76,8 @@ export interface ClientGraphEdge<E = any, V = any> {
      * Последняя точка, которая встала на ребро и двигается из Б в А
      */
     reverseLastPoint?: Point;
+
+    oneWay: boolean;
 
     userData: E;
 }

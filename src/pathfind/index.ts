@@ -172,6 +172,10 @@ function pathfind(
     let current = list.pop();
     while (current && current !== endVertex) {
         for (const edge of getVertexEdges(current)) {
+            if (edge.oneWay && edge.a !== current) {
+                continue;
+            }
+
             const next = anotherEdgeVertex(edge, current);
             if (next.pathFind.id !== id) {
                 next.pathFind.g = current.pathFind.g + edge.length;
