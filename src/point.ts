@@ -2,7 +2,7 @@ import { EventEmitter } from '@trufi/utils/common/eventEmitter';
 import { ClientGraphEdge } from './graph/type';
 import { getSegment } from './graph/utils';
 import { pathfindFromMidway } from './pathfind';
-import { Route } from './route';
+import { EdgeWithDirection, Route } from './route';
 
 const distanceBetween = 10 * 100;
 
@@ -33,6 +33,8 @@ export class Point extends EventEmitter<PointEvents> {
 
     public forward = true;
     private lastUpdateTime = 0;
+    private nextPointOnEdge?: Point;
+    private prevPointOnEdge?: Point;
 
     public position: PointPosition;
     private edgeIndexInRoute: number;
@@ -54,7 +56,6 @@ export class Point extends EventEmitter<PointEvents> {
             edges: [{ edge: this.position.edge, forward: true }],
         };
         this.edgeIndexInRoute = 0;
-        this.position.edge.points.add(this);
     }
 
     public moveTo(toPosition: PointPosition) {
@@ -70,7 +71,10 @@ export class Point extends EventEmitter<PointEvents> {
     public setRoute(route: Route) {
         const { fromAt, edges, toAt } = route;
 
-        this.position.edge.points.delete(this);
+        if (this.prevPointOnEdge) {
+            this.prevPointOnEdge.nextPointOnEdge = undefined;
+            this.prevPointOnEdge = undefined;
+        }
 
         this.route.fromAt = fromAt;
         this.route.edges = edges;
@@ -79,9 +83,19 @@ export class Point extends EventEmitter<PointEvents> {
 
         this.position.at = fromAt;
         this.position.edge = edges[0].edge;
-        this.position.edge.points.add(this);
 
         this.forward = edges[0].forward;
+
+        if (this.forward) {
+            this.nextPointOnEdge = this.position.edge.forwardLastPoint;
+            this.position.edge.forwardLastPoint = this;
+        } else {
+            this.nextPointOnEdge = this.position.edge.reverseLastPoint;
+            this.position.edge.reverseLastPoint = this;
+        }
+        if (this.nextPointOnEdge) {
+            this.nextPointOnEdge.prevPointOnEdge = this;
+        }
     }
 
     public getRoute() {
@@ -118,7 +132,7 @@ export class Point extends EventEmitter<PointEvents> {
 
         this.lastUpdateTime = time;
 
-        if (!hasFreeSpaceForMoving(position.edge, this.forward, this.position.at)) {
+        if (!this.hasSpaceForMovingOnCurrentEdge()) {
             return;
         }
 
@@ -153,20 +167,33 @@ export class Point extends EventEmitter<PointEvents> {
             if (isFinalRouteEdge) {
                 position.at = this.route.toAt;
             } else {
-                const edge = this.route.edges[this.edgeIndexInRoute + 1];
+                const newEdge = this.route.edges[this.edgeIndexInRoute + 1];
 
-                if (!hasFreeSpaceForMoving(edge.edge, edge.forward, edge.forward ? 0 : 1)) {
+                if (!this.hasSpaceForMovingOnNextEdge(newEdge)) {
                     return;
                 }
 
+                if (newEdge.forward) {
+                    this.nextPointOnEdge = newEdge.edge.forwardLastPoint;
+                    newEdge.edge.forwardLastPoint = this;
+                } else {
+                    this.nextPointOnEdge = newEdge.edge.reverseLastPoint;
+                    newEdge.edge.reverseLastPoint = this;
+                }
+                if (this.nextPointOnEdge) {
+                    this.nextPointOnEdge.prevPointOnEdge = this;
+                }
+                if (this.prevPointOnEdge) {
+                    this.prevPointOnEdge.nextPointOnEdge = undefined;
+                    this.prevPointOnEdge = undefined;
+                }
+
                 this.edgeIndexInRoute++;
-                position.at = edge.forward ? 0 : 1;
+                position.at = newEdge.forward ? 0 : 1;
 
-                position.edge.points.delete(this);
-                position.edge = edge.edge;
-                position.edge.points.add(this);
+                position.edge = newEdge.edge;
 
-                this.forward = edge.forward;
+                this.forward = newEdge.forward;
             }
 
             if (this.isFinishedRoute()) {
@@ -181,28 +208,28 @@ export class Point extends EventEmitter<PointEvents> {
             passedDistance: passedDistanceInEdge,
         });
     }
-}
 
-function hasFreeSpaceForMoving(edge: ClientGraphEdge, thisForward: boolean, thisAt: number) {
-    for (const anotherPoint of edge.points) {
-        if (anotherPoint.forward !== thisForward) {
-            continue;
+    private hasSpaceForMovingOnCurrentEdge(): Boolean {
+        if (!this.nextPointOnEdge) {
+            return true;
         }
 
-        const anotherAt = anotherPoint.position.at;
-
-        if ((thisForward && anotherAt < thisAt) || (!thisForward && anotherAt > thisAt)) {
-            continue;
-        }
-
-        if (anotherAt === thisAt) {
-            continue;
-        }
-
-        if (Math.abs(anotherAt - thisAt) * edge.length < distanceBetween) {
-            return false;
-        }
+        const nextPointAt = this.nextPointOnEdge.position.at;
+        return (
+            Math.abs(nextPointAt - this.position.at) * this.position.edge.length > distanceBetween
+        );
     }
 
-    return true;
+    private hasSpaceForMovingOnNextEdge(nextEdge: EdgeWithDirection): Boolean {
+        const lastPoint = nextEdge.forward
+            ? nextEdge.edge.forwardLastPoint
+            : nextEdge.edge.reverseLastPoint;
+        if (!lastPoint) {
+            return true;
+        }
+
+        const thisAt = nextEdge.forward ? 0 : 1;
+        const nextPointAt = lastPoint.position.at;
+        return Math.abs(nextPointAt - thisAt) * nextEdge.edge.length > distanceBetween;
+    }
 }

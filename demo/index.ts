@@ -13,7 +13,7 @@ const center = [82.91395527317273, 55.02479004260136];
 const map = new mapgl.Map('map', {
     key: '042b5b75-f847-4f2a-b695-b5f58adc9dfd',
     center,
-    zoom: 18,
+    zoom: 15,
 });
 
 map.on('click', (ev) => console.log(ev.lngLat));

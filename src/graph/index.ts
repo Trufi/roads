@@ -1,49 +1,62 @@
 import { vec2dist } from '@trufi/utils/vec2/dist';
-import { ClientGraph, ClientGraphEdge, ClientGraphVertex, DataGraph } from './type';
+import { ClientGraphEdge } from '..';
+import { ClientGraph, ClientGraphVertex, DataGraph } from './type';
 import { unpackGraph } from './unpack';
 
 export function prepareGraph(graph: DataGraph): ClientGraph {
     // Распаковываем граф пришедший с сервера
     unpackGraph(graph);
 
-    // На самом деле этот тот же объект graph, мы его мутируем в процессе,
-    // а отдельная переменная для TS
-    const clientGraph: ClientGraph = graph as any;
+    const vertices: ClientGraphVertex[] = graph.vertices.map((vertex, index) => ({
+        index,
+        type: 'road',
+        coords: vertex.coords,
 
-    graph.vertices.forEach((vertex, index) => {
-        const clientVertex: ClientGraphVertex = vertex as any;
-        clientVertex.index = index;
+        // Осталвяем пустой массив, заполним его позже
+        edges: [],
 
-        // Заменяем индексы граней на ссылки
-        clientVertex.edges = vertex.edges.map((edgeIndex) => clientGraph.edges[edgeIndex]);
-
-        clientVertex.pathFind = {
+        pathFind: {
             f: 0,
             g: 0,
             id: -1,
             routeLength: 0,
             parent: undefined,
-        };
+        },
+        userData: vertex.userData ?? {},
+    }));
 
-        clientVertex.userData = vertex.userData ?? {};
-    });
-
-    graph.edges.forEach((edge, index) => {
-        const clientEdge: ClientGraphEdge = edge as any;
-        clientEdge.index = index;
+    const edges: ClientGraphEdge[] = graph.edges.map((edge, index) => ({
+        index,
+        type: 'road',
 
         // Заменяем индексы вершин на их ссылки для удобства в дальнейшем
-        clientEdge.a = clientGraph.vertices[edge.a];
-        clientEdge.b = clientGraph.vertices[edge.b];
+        a: vertices[edge.a],
+        b: vertices[edge.b],
 
-        clientEdge.length = calcLineLength(clientEdge.geometry);
+        geometry: edge.geometry,
+        length: calcLineLength(edge.geometry),
 
-        clientEdge.userData = edge.userData ?? {};
+        userData: edge.userData ?? {},
+        points: new Set(),
+        forwardLastPoint: undefined,
+        reverseLastPoint: undefined,
+    }));
 
-        clientEdge.points = new Set();
-    });
+    // Теперь в вершинах заменяем индексы граней на ссылки
+    for (let i = 0; i < vertices.length; i++) {
+        const clientVertex = vertices[i];
+        const dataVertex = graph.vertices[i];
+        clientVertex.edges = dataVertex.edges.map((edgeIndex) => edges[edgeIndex]);
+    }
 
-    clientGraph.userData = graph.userData ?? {};
+    const clientGraph: ClientGraph = {
+        center: graph.center,
+        min: graph.min,
+        max: graph.max,
+        vertices,
+        edges,
+        userData: graph.userData ?? {},
+    };
 
     return clientGraph;
 }

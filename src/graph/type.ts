@@ -66,7 +66,15 @@ export interface ClientGraphEdge<E = any, V = any> {
      */
     length: number;
 
-    points: Set<Point>;
+    /**
+     * Последняя точка, которая встала на ребро и двигается из А в Б
+     */
+    forwardLastPoint?: Point;
+
+    /**
+     * Последняя точка, которая встала на ребро и двигается из Б в А
+     */
+    reverseLastPoint?: Point;
 
     userData: E;
 }
