@@ -1,3 +1,4 @@
+import { clamp } from '@trufi/utils';
 import { EventEmitter } from '@trufi/utils/common/eventEmitter';
 import { ClientGraphEdge } from './graph/type';
 import { getSegment } from './graph/utils';
@@ -14,6 +15,8 @@ export interface PointInitialData {
     speed: number;
     userData?: any;
     keepingDistance?: number;
+    acceleration?: number;
+    deceleration?: number;
 }
 
 export interface PointMoveEvent<E = any> {
@@ -28,7 +31,10 @@ export interface PointEvents {
 
 export class Point extends EventEmitter<PointEvents> {
     public readonly userData: any;
-    private speed: number;
+    private maxSpeed: number;
+    private speed = 0;
+    private acceleration = Infinity;
+    private deceleration = Infinity;
 
     private forward = true;
 
@@ -50,7 +56,9 @@ export class Point extends EventEmitter<PointEvents> {
     constructor(data: PointInitialData) {
         super();
 
-        this.speed = data.speed;
+        this.maxSpeed = data.speed;
+        this.acceleration = data.acceleration ?? Infinity;
+        this.deceleration = data.deceleration ?? Infinity;
         this.userData = data.userData;
         this.position = {
             edge: data.position.edge,
@@ -102,7 +110,7 @@ export class Point extends EventEmitter<PointEvents> {
     }
 
     public getSpeed() {
-        return this.speed;
+        return this.maxSpeed;
     }
 
     public getCoords() {
@@ -121,6 +129,18 @@ export class Point extends EventEmitter<PointEvents> {
 
     public updateMoving(dt: number) {
         const { position } = this;
+
+        const isFinalRouteEdge = this.edgeIndexInRoute === this.route.edges.length - 1;
+
+        const distanceLeft = this.distanceToNextPointOnEdge();
+        const safeDistance = this.calcSafeDistance(this.speed);
+
+        if (distanceLeft <= safeDistance) {
+            this.speed = clamp(this.speed - this.deceleration * dt, 0, this.maxSpeed);
+        } else {
+            this.speed = clamp(this.speed + this.acceleration * dt, 0, this.maxSpeed);
+        }
+
         const passedDistanceInEdge = this.speed * dt;
 
         if (!this.hasSpaceOnCurrentEdge()) {
@@ -129,7 +149,6 @@ export class Point extends EventEmitter<PointEvents> {
 
         const dx = position.edge.length ? passedDistanceInEdge / position.edge.length : 1;
 
-        const isFinalRouteEdge = this.edgeIndexInRoute === this.route.edges.length - 1;
         if (isFinalRouteEdge && position.at === this.route.toAt) {
             return;
         }
@@ -297,5 +316,53 @@ export class Point extends EventEmitter<PointEvents> {
         } else if (edge.reverseLastPoint === this) {
             edge.reverseLastPoint = this.next;
         }
+    }
+
+    /**
+     * Какое расстоние должна держать точка, чтобы полностью остановиться
+     */
+    private calcSafeDistance(speed: number): number {
+        return (1.5 * speed * speed) / this.deceleration;
+    }
+
+    private distanceToNextPointOnEdge() {
+        let distanceLeft = 0;
+
+        let endEdgeIndex: number;
+        let endAt: number;
+        if (this.next) {
+            endEdgeIndex = this.edgeIndexInRoute;
+            if (this.forward) {
+                endAt = Math.min(this.next.position.at, this.route.toAt);
+            } else {
+                endAt = Math.max(this.next.position.at, this.route.toAt);
+            }
+        } else {
+            endEdgeIndex = this.route.edges.length - 1;
+            endAt = this.route.toAt;
+        }
+
+        const isSameRouteEdge = this.edgeIndexInRoute === endEdgeIndex;
+
+        if (isSameRouteEdge) {
+            const atDelta = Math.abs(this.position.at - endAt);
+            distanceLeft += atDelta * this.position.edge.length;
+        } else {
+            const atDelta = this.forward ? 1 - this.position.at : this.position.at;
+            distanceLeft += atDelta * this.position.edge.length;
+        }
+
+        for (let i = this.edgeIndexInRoute + 1; i < endEdgeIndex - 1; i++) {
+            const edge = this.route.edges[i];
+            distanceLeft += edge.edge.length;
+        }
+
+        if (!isSameRouteEdge) {
+            const edge = this.route.edges[endEdgeIndex];
+            const atDelta = edge.forward ? endAt : 1 - endAt;
+            distanceLeft += atDelta * edge.edge.length;
+        }
+
+        return distanceLeft;
     }
 }
